@@ -1,2 +1,10 @@
 /download
 /data
+/temp
+/.vscode
+/src/*.ipynb
+/src/comb.py
+/Classification-Model
+/Bert-Chinese_BiGRU_Model
+/Classification-model
+/bert-zh
