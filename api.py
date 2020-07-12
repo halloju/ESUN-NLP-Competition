@@ -27,9 +27,10 @@ strategy = tf.distribute.get_strategy()
 
 
 MAX_LEN = 192
-print('Load Classifiction Model')
-cls = ClassificationModel.CLS
+cls = ClassificationModel.load_model()
+print('Load trained Weight')
 cls.load_weights('Classification-model/Classification-model-checkpoint')
+#print(cls.summary())
 fast_tokenizer = BertWordPieceTokenizer('bert-zh/vocab.txt', lowercase=False) #"BERT TOKENIZER"
 NER_MODLE = BiGRU_Model.load_model('Bert-Chinese_BiGRU_Model')
 print('Load NER Model')
@@ -55,24 +56,27 @@ def predict(article):
 
     ####### PUT YOUR MODEL INFERENCING CODE HERE #######
     art_enc = ClassificationModel.fast_encode(article, fast_tokenizer, maxlen=MAX_LEN)
-	art_dataset = tf.data.Dataset.from_tensor_slices(art_enc).batch(1)
+    art_dataset = (
+        tf.data.Dataset
+        .from_tensor_slices(art_enc)
+        .batch(1)
+        )
     pred = cls.predict(art_dataset) ## predict if the news is about AML
-	IND = (pred>0.5).astype('int')
+    IND = (pred>0.5).astype('int')
 
-	if type(IND) is not float and IND == 1:
+    if type(IND) is not float and IND == 1:
 	## get summarize text
-	news = NER.get_summarize(article)
+        news = NER.get_summarize(article)
 
 	## NER model
-		if len(news) > 0:
-		  	ners = NER_MODLE.predict_entities(news)
-
-		  	prediction = NER.get_names(ners)
+        if len(news) > 0:
+            ners = NER_MODLE.predict_entities(news)
+            prediction = NER.get_names(ners)
 		
-		else:
-		  	prediction = []
+        else:
+            prediction = []
 
-	else:
+    else:
         prediction = []
 	#if IND==1:
 		

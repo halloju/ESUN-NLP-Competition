@@ -8,7 +8,7 @@ from tensorflow.keras.optimizers import Adam
 
 strategy = tf.distribute.get_strategy()
 
-
+MAX_LEN = 192
 #with strategy.scope():
 #    transformer_layer = (
 #        transformers.TFBertModel
@@ -29,14 +29,7 @@ from src import ClassificationModel
 strategy = tf.distribute.get_strategy()
 
 
-MAX_LEN = 192
-with strategy.scope():
-    transformer_layer = (
-        transformers.TFBertModel
-        .from_pretrained('bert-base-chinese')
-    )
-    cls = ClassificationModel.build_model(transformer_layer, max_len=MAX_LEN)
-
+cls = ClassificationModel.load_model()
 print('Load trained Weight')
 cls.load_weights('Classification-model/Classification-model-checkpoint')
 print(cls.summary())
@@ -58,7 +51,11 @@ NER_MODLE = BiGRU_Model.load_model('Bert-Chinese_BiGRU_Model')
 
 def predict(article):
 	art_enc = ClassificationModel.fast_encode(article, fast_tokenizer, maxlen=MAX_LEN)
-	art_dataset = tf.data.Dataset.from_tensor_slices(art_enc).batch(1)
+	art_dataset = (
+   		tf.data.Dataset
+   		.from_tensor_slices(art_enc)
+   		.batch(1)
+	)
 	pred = cls.predict(art_dataset) ## predict if the news is about AML
 	IND = (pred>0.5).astype('int')
 
@@ -79,15 +76,16 @@ def predict(article):
 		prediction = []
 	#if IND==1:
 		
-    #prediction = ['aha','danny','jack']
-    
-    
-    ####################################################
-    #prediction = _check_datatype_to_list(prediction)
+	#prediction = ['aha','danny','jack']
+
+
+	####################################################
+	#prediction = _check_datatype_to_list(prediction)
 	return prediction
 
 
 if __name__ == "__main__":
-	predict(article)
+	names = predict(article)
+	print(names)
   
 

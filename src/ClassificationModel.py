@@ -1,10 +1,12 @@
-import os
 import tensorflow as tf
+import numpy as np
+import os
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import ModelCheckpoint
 import transformers
+import tqdm
 
 from tokenizers import BertWordPieceTokenizer
 
@@ -16,11 +18,10 @@ def fast_encode(texts, tokenizer, chunk_size=256, maxlen=192):
     tokenizer.enable_truncation(max_length=maxlen)
     tokenizer.enable_padding()
     all_ids = []
-    
-    for i in tqdm(range(0, len(texts), chunk_size)):
-        text_chunk = texts[i:i+chunk_size].tolist()
-        encs = tokenizer.encode_batch(text_chunk)
-        all_ids.extend([enc.ids for enc in encs])
+
+    text_chunk = [texts]
+    encs = tokenizer.encode_batch(text_chunk)
+    all_ids.extend([enc.ids for enc in encs])
     
     return np.array(all_ids)
 
@@ -39,12 +40,13 @@ def build_model(transformer, max_len=512):
     
     return model
 
-
-MAX_LEN = 192
-strategy = tf.distribute.get_strategy()
-with strategy.scope():
-    transformer_layer = (
-        transformers.TFBertModel
-        .from_pretrained('bert-base-chinese')
-    )
+def load_model():
+    MAX_LEN = 192
+    strategy = tf.distribute.get_strategy()
+    with strategy.scope():
+        transformer_layer = (
+		    transformers.TFBertModel
+		    .from_pretrained('bert-base-chinese')
+		)
     CLS = build_model(transformer_layer, max_len=MAX_LEN)
+    return CLS
