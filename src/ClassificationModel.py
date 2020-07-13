@@ -16,7 +16,7 @@ def fast_encode(texts, tokenizer, chunk_size=256, maxlen=192):
     Encoder for encoding the text into sequence of integers for BERT Input
     """
     tokenizer.enable_truncation(max_length=maxlen)
-    tokenizer.enable_padding()
+    tokenizer.enable_padding(length=maxlen)
     all_ids = []
 
     text_chunk = [texts]

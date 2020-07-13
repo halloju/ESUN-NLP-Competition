@@ -31,7 +31,7 @@ cls = ClassificationModel.load_model()
 print('Load trained Weight')
 cls.load_weights('Classification-model/Classification-model-checkpoint')
 #print(cls.summary())
-fast_tokenizer = BertWordPieceTokenizer('bert-zh/vocab.txt', lowercase=False) #"BERT TOKENIZER"
+fast_tokenizer = BertWordPieceTokenizer('bert-zh/vocab.txt', lowercase=False, padding=True) #"BERT TOKENIZER"
 NER_MODLE = BiGRU_Model.load_model('Bert-Chinese_BiGRU_Model')
 print('Load NER Model')
 ##########################################################################
@@ -116,7 +116,7 @@ def healthcheck():
 def inference():
     """ API that return your model predictions when E.SUN calls this API """
     data = request.get_json(force=True)  
-    esun_timestamp = data['esun_timestamp'] #自行取用
+    #esun_timestamp = data['esun_timestamp'] #自行取用
     
     t = datetime.datetime.now()  
     ts = str(int(t.utcnow().timestamp()))
