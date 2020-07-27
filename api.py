@@ -23,17 +23,28 @@ import kashgari
 from kashgari.tasks.labeling import BiGRU_Model
 from kashgari.embeddings import BertEmbedding
 from src import NER
-strategy = tf.distribute.get_strategy()
 
+from kashgari.logger import logger
+logger.disabled = True
+#from tensorflow.python.client import device_lib
+#print(device_lib.list_local_devices())
 
-MAX_LEN = 192
+#from keras import backend as K
+#K.tensorflow_backend._get_available_gpus()
+
+MAX_LEN = 64
 cls = ClassificationModel.load_model()
 print('Load trained Weight')
-cls.load_weights('Classification-model/Classification-model-checkpoint')
+cls.load_weights('bert-Classification-model-64')
 #print(cls.summary())
-fast_tokenizer = BertWordPieceTokenizer('bert-zh/vocab.txt', lowercase=False, padding=True) #"BERT TOKENIZER"
+fast_tokenizer = BertWordPieceTokenizer('bert-zh/vocab.txt', lowercase=False) #"BERT TOKENIZER"
 NER_MODLE = BiGRU_Model.load_model('Bert-Chinese_BiGRU_Model')
 print('Load NER Model')
+kashgari.config.use_cudnn_cell = True
+
+print('load jeiba')
+tm = jieba.cut('65歲詐貸阿伯許祈文，利用街友當人頭，2016年開設6間空殼公司，詐騙全台12家銀行，共涉犯40多起詐貸案，華南銀行遭騙高達5.2億元，甚至造成2.7億元呆帳。',cut_all=False)
+list(" ".join(tm).split(" "))
 ##########################################################################
 
 
@@ -130,4 +141,4 @@ def inference():
     return jsonify({'esun_timestamp': data['esun_timestamp'], 'server_uuid': server_uuid, 'answer': answer, 'server_timestamp': server_timestamp, 'esun_uuid': data['esun_uuid']})
 
 if __name__ == "__main__":    
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=False)

@@ -1,10 +1,13 @@
+#%%
 import re
 import numpy as np
 from snownlp import SnowNLP
+import jieba
 
+#%%
 ## format 
 def text2array(text, sequence_length):
-    textArr = re.findall('.{' + str(sequence_length) + '}', text)
+    textArr = []#re.findall('.{' + str(sequence_length) + '}', text)
     textArr.append(text[(len(textArr) * sequence_length):])
     return [[c for c in text] for text in textArr]
 
@@ -20,15 +23,26 @@ def sent_tokenize(x):
 
 ## get summarize text
 def get_summarize(texts):
-  key_sen = np.round(len(texts)/100).astype('int')
-  s = SnowNLP(texts)
-  t_keysen = s.summary(key_sen)
+  len_text = len(texts)
+  if(len_text)>1000:
+    key_sen = 50
+  else:
+    key_sen = np.round(len(texts)/25).astype('int')
+  #key_sen = 50
+  summ = SnowNLP(texts)
+  t_keysen = summ.summary(key_sen)
 
   news = []
   for t in t_keysen:
       sents = sent_tokenize(t)
       for s in sents:
-          out = text2array(s, sequence_length=len(t))
+        ws = jieba.cut(s, cut_all=False)
+        ws_list = list(" ".join(ws).split(" "))
+        print(ws_list)
+        if any('記者' in w for w in ws_list) or any('總統' in w for w in ws_list):
+          pass
+        else:
+          out = text2array(s, sequence_length=len(s))
           news.extend(out)
 
   return news
@@ -40,7 +54,13 @@ def get_names(ners):
       for entity in la['labels']:
         if entity['entity'] == 'PER':
           if len(entity['value'])>2:
-            names.append(entity['value'])
+            if "男" in list(entity['value']) or "女" in list(entity['value']):
+              pass
+            else: 
+              names.append(entity['value'].replace(" ", ""))
   names = np.unique(np.array(names)).tolist()
 
   return names     
+
+
+# %%
