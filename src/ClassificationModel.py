@@ -26,6 +26,23 @@ def fast_encode(texts, tokenizer, chunk_size=256, maxlen=192):
     return np.array(all_ids)
 
 
+
+def sents_encode(texts, tokenizer, chunk_size=32, maxlen=10):
+    """
+    Encoder for encoding the text into sequence of integers for BERT Input
+    """
+    tokenizer.enable_truncation(max_length=maxlen)
+    tokenizer.enable_padding(length=maxlen)
+    all_ids = []
+    
+    for i in range(0, len(texts), chunk_size):
+        text_chunk = texts[i:i+chunk_size]
+        encs = tokenizer.encode_batch(text_chunk)
+        all_ids.extend([enc.ids for enc in encs])
+    
+    return np.array(all_ids)
+
+
 def build_model(transformer, max_len=512):
     """
     function for training the BERT model
@@ -40,8 +57,7 @@ def build_model(transformer, max_len=512):
     
     return model
 
-def load_model():
-    MAX_LEN = 192
+def load_model(MAX_LEN):
     strategy = tf.distribute.get_strategy()
     with strategy.scope():
         transformer_layer = (

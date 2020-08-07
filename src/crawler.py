@@ -25,10 +25,9 @@ def crawler(url):
     return(title, text)
 
 
-tStart = time.time()#計時開始
+tStart = time.time()
 LinkList = pd.read_csv(os.path.join('download','tbrain_train_final_0610.csv'))
-#dm = 
-#%%
+
 for i, link in enumerate(LinkList['hyperlink']):
     ID  = LinkList['news_ID'][i]
     names =  LinkList['name'][i]
@@ -48,9 +47,9 @@ for i, link in enumerate(LinkList['hyperlink']):
     else :
         pass
     
-tEnd = time.time()#計時結束
+tEnd = time.time()
 
-print ("It cost %f sec" % (tEnd - tStart))#會自動做近位
+print ("It cost %f sec" % (tEnd - tStart))
 
 
 

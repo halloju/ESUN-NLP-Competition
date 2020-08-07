@@ -6,6 +6,9 @@ import datetime
 import hashlib
 import numpy as np
 import pandas as pd
+import logging
+from logging.handlers import RotatingFileHandler
+from time import strftime
 
 app = Flask(__name__)
 ####### PUT YOUR INFORMATION HERE ########
@@ -32,19 +35,25 @@ logger.disabled = True
 #from keras import backend as K
 #K.tensorflow_backend._get_available_gpus()
 
-MAX_LEN = 64
-cls = ClassificationModel.load_model()
+## AML Classification Model
+MAX_LEN = 256
+cls = ClassificationModel.load_model(MAX_LEN)
 print('Load trained Weight')
-cls.load_weights('bert-Classification-model-64')
-#print(cls.summary())
+cls.load_weights('bert-Classification-Model-256')
+
+## Sents chosen
+m_len = 64
+cents = ClassificationModel.load_model(m_len)
+print('Load trained Weight')
+cents.load_weights('Sents-Classification-model-64')
+
+## NER Model
 fast_tokenizer = BertWordPieceTokenizer('bert-zh/vocab.txt', lowercase=False) #"BERT TOKENIZER"
-NER_MODLE = BiGRU_Model.load_model('Bert-Chinese_BiGRU_Model')
+NER_MODLE = BiGRU_Model.load_model('Bert-Chinese_BiGRU_Model-100')
 print('Load NER Model')
 kashgari.config.use_cudnn_cell = True
 
-print('load jeiba')
-tm = jieba.cut('65歲詐貸阿伯許祈文，利用街友當人頭，2016年開設6間空殼公司，詐騙全台12家銀行，共涉犯40多起詐貸案，華南銀行遭騙高達5.2億元，甚至造成2.7億元呆帳。',cut_all=False)
-list(" ".join(tm).split(" "))
+
 ##########################################################################
 
 
@@ -60,42 +69,40 @@ def generate_server_uuid(input_string):
     return server_uuid
 
 def predict(article):
-    """ Predict your model result
-    @param article (str): a news article
-    @returns prediction (list): a list of name
-    """
-
-    ####### PUT YOUR MODEL INFERENCING CODE HERE #######
     art_enc = ClassificationModel.fast_encode(article, fast_tokenizer, maxlen=MAX_LEN)
     art_dataset = (
-        tf.data.Dataset
-        .from_tensor_slices(art_enc)
-        .batch(1)
-        )
+   		tf.data.Dataset
+   		.from_tensor_slices(art_enc)
+   		.batch(1)
+	)
     pred = cls.predict(art_dataset) ## predict if the news is about AML
     IND = (pred>0.5).astype('int')
-
+	# print(IND)
     if type(IND) is not float and IND == 1:
-	## get summarize text
-        news = NER.get_summarize(article)
-
+        sents = NER.get_summarize(article)
+		# print(sents)
+        sents_enc = ClassificationModel.sents_encode(sents, fast_tokenizer, maxlen=m_len) 
+        sents_rel = cents.predict(sents_enc) ## select relevant sentances
+        IND_sents = (sents_rel>0.5).astype('int')
 	## NER model
-        if len(news) > 0:
+        news=[]
+        for i, ind in enumerate(IND_sents):
+            if ind ==1:
+                sent_split = NER.sent_tokenize(sents[i])
+                for o in sent_split:
+                    out = NER.text2array(o, sequence_length=len(o))
+                    news.extend(out)
+        
+        if len(news)>0:
             ners = NER_MODLE.predict_entities(news)
             prediction = NER.get_names(ners)
-		
         else:
             prediction = []
-
     else:
         prediction = []
-	#if IND==1:
-		
-    #prediction = ['aha','danny','jack']
     
-    
-    ####################################################
     prediction = _check_datatype_to_list(prediction)
+    
     return prediction
 
 def _check_datatype_to_list(prediction):
@@ -128,7 +135,6 @@ def inference():
     """ API that return your model predictions when E.SUN calls this API """
     data = request.get_json(force=True)  
     #esun_timestamp = data['esun_timestamp'] #自行取用
-    
     t = datetime.datetime.now()  
     ts = str(int(t.utcnow().timestamp()))
     server_uuid = generate_server_uuid(CAPTAIN_EMAIL+ts)
@@ -140,5 +146,19 @@ def inference():
     server_timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return jsonify({'esun_timestamp': data['esun_timestamp'], 'server_uuid': server_uuid, 'answer': answer, 'server_timestamp': server_timestamp, 'esun_uuid': data['esun_uuid']})
 
-if __name__ == "__main__":    
+@app.after_request
+def after_request(response):
+    timestamp = strftime('[%Y-%b-%d %H:%M:%S]')
+    logger.info('%s %s %s', timestamp, request.get_json(),response.get_json())
+    return response
+# def log_request_info():
+#     # app.logger.info('Headers: %s', request.headers)
+#     app.logger.info('Body: %s', data)
+#     app.logger.info('Answer: %s', answer)
+
+if __name__ == "__main__":
+    handler = RotatingFileHandler('app.log', maxBytes=100000, backupCount=10)
+    logger = logging.getLogger('tdm')
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)   
     app.run(host='0.0.0.0', port=8080, debug=False)
